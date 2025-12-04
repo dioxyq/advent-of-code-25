@@ -5,7 +5,7 @@
 
 auto main(int argc, char **argv) -> int {
     if (argc != 2) {
-        std::cout << "usage: day1 INPUT_FILE" << std::endl;
+        std::cout << "usage: part1 INPUT_FILE" << std::endl;
         return 1;
     }
 

@@ -8,7 +8,7 @@ auto main(int argc, char **argv) -> int {
     const int DIAL_START = 50;
 
     if (argc != 2) {
-        std::cout << "usage: day1 INPUT_FILE" << std::endl;
+        std::cout << "usage: part2 INPUT_FILE" << std::endl;
         return 1;
     }
 
