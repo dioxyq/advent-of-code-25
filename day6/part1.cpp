@@ -56,8 +56,7 @@ auto main(int argc, char **argv) -> int {
     for (const auto &nums : num_rows) {
         const auto zip = std::views::zip(ops, nums);
         std::transform(zip.cbegin(), zip.cend(), results.cbegin(),
-                       results.begin(),
-                       [](const std::tuple<op, size_t> &o_n, const size_t &r) {
+                       results.begin(), [](const auto &o_n, const auto &r) {
                            return std::get<0>(o_n)(r, std::get<1>(o_n));
                        });
     }

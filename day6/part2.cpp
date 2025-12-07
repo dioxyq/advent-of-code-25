@@ -81,12 +81,12 @@ auto main(int argc, char **argv) -> int {
 
     const auto zip = std::views::zip(ops, num_cols);
     std::transform(zip.cbegin(), zip.cend(), results.cbegin(), results.begin(),
-                   [](const std::tuple<op, std::vector<std::string>> &o_n,
-                      const size_t &r) {
-                       op o = std::get<0>(o_n);
+                   [](const auto &o_n, const size_t &r) {
+                       const auto &o = std::get<0>(o_n);
+                       const auto &n = std::get<1>(o_n);
                        return std::accumulate(
-                           std::get<1>(o_n).cbegin(), std::get<1>(o_n).cend(),
-                           r, [&o](const size_t &v, const std::string &s) {
+                           n.cbegin(), n.cend(), r,
+                           [&o](const auto &v, const auto &s) {
                                return o(v, std::stoi(s));
                            });
                    });
