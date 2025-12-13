@@ -1,9 +1,12 @@
+#include <algorithm>
+#include <cassert>
 #include <fstream>
 #include <iostream>
+#include <queue>
+#include <ranges>
 #include <set>
 #include <sstream>
 #include <string>
-#include <unordered_set>
 #include <vector>
 
 using namespace std;
@@ -15,15 +18,14 @@ class Pos {
     size_t z;
 
     Pos() = default;
-    Pos(Pos &other) = default;
-    Pos(Pos &&other) = default;
+    // Pos(const Pos &other) = default;
+    // Pos(Pos &&other) = default;
     Pos(size_t x, size_t y, size_t z) : x(x), y(y), z(z) {}
 
-    auto operator=(const Pos &other) -> Pos & = default;
+    // auto operator=(const Pos &other) -> Pos & = default;
+    // auto operator=(Pos other) -> Pos { return Pos(other); }
 
-    auto operator==(const Pos &rhs) const -> bool {
-        return this->x == rhs.x and this->y == rhs.y and this->z and rhs.z;
-    }
+    auto operator<=>(const Pos &rhs) const = default;
 
     auto operator+(const Pos &rhs) const -> Pos {
         return Pos(this->x + rhs.x, this->y + rhs.y, this->z + rhs.z);
@@ -77,43 +79,76 @@ auto main(int argc, char **argv) -> int {
     string path = argv[1];
     ifstream file(path);
 
-    size_t result = 0;
+    // get all the positions
     vector<Pos> positions{};
-
     string line;
     while (getline(file, line)) {
-        Pos pos;
+        Pos pos{};
         istringstream stream(line);
         stream >> pos;
         positions.push_back(std::move(pos));
     }
 
-    set<unordered_set<Pos>> circuits{};
+    // find closest pairs
+    static const size_t NUM_PAIRS = 1000;
 
-    Pos prev = positions.back();
-    for (const auto &pos : positions) {
-        Pos closest = prev;
-        for (const auto &other : positions) {
-            if (pos != other and
-                pos.dist_square(other) < pos.dist_square(closest)) {
-                closest = other;
+    auto dist_cmp = [](pair<Pos, Pos> &a, pair<Pos, Pos> &b) {
+        return a.first.dist_square(a.second) < b.first.dist_square(b.second);
+    };
+    priority_queue<pair<Pos, Pos>, std::vector<pair<Pos, Pos>>,
+                   decltype(dist_cmp)>
+        pairs(dist_cmp);
+
+    for (size_t i = 0; i < positions.size() - 1; ++i) {
+        for (size_t j = i + 1; j < positions.size(); ++j) {
+            Pos p1 = positions[i], p2 = positions[j];
+            if (pairs.empty()) {
+                pairs.push(pair(p1, p2));
+                continue;
+            }
+            auto [t1, t2] = pairs.top();
+            if (p1.dist_square(p2) >= t1.dist_square(t2)) {
+                continue;
+            }
+            pairs.push(pair(p1, p2));
+            if (pairs.size() > NUM_PAIRS) {
+                pairs.pop();
             }
         }
-        set<reference_wrapper<unordered_set<Pos>>> matching{};
-        for (const auto &circuit : circuits) {
-            if (circuit.contains(pos) or circuit.contains(closest)) {
-                matching.insert(circuit);
-            }
-        }
-        unordered_set<Pos> new_circuit{};
-        for (const auto &circuit : matching) {
-            new_circuit.merge(circuit);
-            circuits.erase(circuit);
-        }
-        prev = pos;
     }
 
-    // for (const auto &circuit : circuits) {
-    //     cout << circuit << endl;
-    // }
+    // construct circuits from pairs
+    set<set<Pos>> circuits{};
+    for (; not pairs.empty(); pairs.pop()) {
+        Pos a = pairs.top().first, b = pairs.top().second;
+
+        // find circuits that contain pair
+        vector<reference_wrapper<const set<Pos>>> matching{};
+        for (const auto &circuit : circuits) {
+            if (circuit.contains(a) or circuit.contains(b)) {
+                matching.emplace_back(circuit);
+            }
+        }
+
+        // merge circuits
+        set<Pos> new_circuit{};
+        for (const auto &circuit : matching) {
+            new_circuit.merge(set<Pos>(circuit.get()));
+            circuits.erase(circuit);
+        }
+        new_circuit.insert(a);
+        new_circuit.insert(b);
+        circuits.insert(std::move(new_circuit));
+    }
+
+    size_t result = 1;
+    for (size_t _ = 0; _ < 3; ++_) {
+        auto max = max_element(
+            circuits.begin(), circuits.end(),
+            [](set<Pos> a, set<Pos> b) { return a.size() < b.size(); });
+        result *= max->size();
+        circuits.erase(max);
+    }
+
+    cout << result << endl;
 }
